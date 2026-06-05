@@ -1,0 +1,113 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+
+# Page Configuration
+st.set_page_config(
+    page_title="Interactive Dashboard",
+    page_icon="📊",
+    layout="wide"
+)
+
+# Title
+st.title("📊 Interactive Dashboard Development")
+st.markdown("Analyze business performance using interactive visualizations.")
+
+# Load Dataset
+@st.cache_data
+def load_data():
+    return pd.read_csv("dashboard_data.csv")
+
+df = load_data()
+
+# Sidebar Filters
+st.sidebar.header("Filters")
+
+regions = st.sidebar.multiselect(
+    "Select Region",
+    options=df["Region"].unique(),
+    default=df["Region"].unique()
+)
+
+categories = st.sidebar.multiselect(
+    "Select Category",
+    options=df["Category"].unique(),
+    default=df["Category"].unique()
+)
+
+# Apply Filters
+filtered_df = df[
+    (df["Region"].isin(regions)) &
+    (df["Category"].isin(categories))
+]
+
+# KPI Section
+total_sales = filtered_df["Sales"].sum()
+total_revenue = filtered_df["Revenue"].sum()
+total_profit = filtered_df["Profit"].sum()
+total_customers = filtered_df["Customers"].sum()
+
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric("Total Sales", f"{total_sales:,.0f}")
+col2.metric("Total Revenue", f"₹{total_revenue:,.0f}")
+col3.metric("Total Profit", f"₹{total_profit:,.0f}")
+col4.metric("Customers", f"{total_customers:,.0f}")
+
+st.markdown("---")
+
+# Sales by Region
+fig_region = px.bar(
+    filtered_df.groupby("Region")["Sales"].sum().reset_index(),
+    x="Region",
+    y="Sales",
+    title="Sales by Region"
+)
+
+st.plotly_chart(fig_region, use_container_width=True)
+
+# Revenue Trend
+fig_trend = px.line(
+    filtered_df,
+    x="Date",
+    y="Revenue",
+    title="Revenue Trend"
+)
+
+st.plotly_chart(fig_trend, use_container_width=True)
+
+# Category Distribution
+fig_category = px.pie(
+    filtered_df,
+    names="Category",
+    values="Sales",
+    title="Sales by Category"
+)
+
+st.plotly_chart(fig_category, use_container_width=True)
+
+# Profit Analysis
+fig_profit = px.scatter(
+    filtered_df,
+    x="Sales",
+    y="Profit",
+    color="Region",
+    size="Customers",
+    title="Sales vs Profit Analysis"
+)
+
+st.plotly_chart(fig_profit, use_container_width=True)
+
+# Data Table
+st.subheader("Filtered Dataset")
+st.dataframe(filtered_df)
+
+# Download Button
+csv = filtered_df.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    label="Download Filtered Data",
+    data=csv,
+    file_name="filtered_data.csv",
+    mime="text/csv"
+)
